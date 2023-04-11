@@ -1,6 +1,6 @@
-# Priority Based Throttling
+# Priority Based Execution
 
-Priority based throttling is a capability which allows users to specify priority to the request sent to Cosmos DB. Based on the priority specified by the user, if there are more requests than the configured RU/S in a second, then Cosmos DB will throttle low priority requests to allow high priority requests to execute. 
+Priority based execution is a capability which allows users to specify priority to the request sent to Cosmos DB. Based on the priority specified by the user, if there are more requests than the configured RU/S in a second, then Cosmos DB will throttle low priority requests to allow high priority requests to execute. 
 
 This capability allows a user to perform more important tasks while delaying lesser important tasks when there are higher number of requests than what a container with configured RU/s can handle at a given time. The lesser important tasks will be continuously retried by any client using SDK based on the retry time and will be executed once the requirement of important (high priority) tasks are satisfied. 
 
@@ -13,7 +13,7 @@ This feature is not guaranteed to always throttle low priority requests in favou
 - .NET
 
 ## How to get started: 
-Step 1: Whitelist your account by completing the nomination form : [priority based throttling - preview request](https://forms.office.com/Pages/DesignPageV2.aspx?origin=NeoPortalPage&subpage=design&id=v4j5cvGGr0GRqy180BHbR_kUn4g8ufhFjXbbwUF1gXFUMUQzUzFZSVkzODRSRkxXM0RKVDNUSDBGNi4u)
+Step 1: Whitelist your account by completing the nomination form : [priority based throttling - preview request](https://forms.microsoft.com/Pages/ResponsePage.aspx?id=v4j5cvGGr0GRqy180BHbR_kUn4g8ufhFjXbbwUF1gXFUMUQzUzFZSVkzODRSRkxXM0RKVDNUSDBGNi4u)
 
 Step2: Download the Nuget Package
 [to be added]
@@ -21,7 +21,23 @@ Step2: Download the Nuget Package
 Step3: Send us your feedback, comments, questions using the Issues tab on this repo. 
 
 ## Sample Code
-[To be added]
+
+```C#
+Document doc = new Document() 
+{ 
+    Id = "id", 
+    Address = "address1", 
+    Pkey = "pkey1" 
+}; 
+
+// this code will insert an item in Cosmos DB container with low priority
+
+using Microsoft.Azure.Cosmos.PartitionKey;
+using Microsoft.Azure.Cosmos.PriorityLevel;
+ 
+RequestOptions requestOptions = new ItemRequestOptions{PriorityLevel = PriorityLevel.Low};
+ItemResponse<Document> response = await container.CreateItemAsync<Document(doc, new PartitionKey("pkey1"), requestOptions); 
+```
 
 ## FAQ’s 
 
