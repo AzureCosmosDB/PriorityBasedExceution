@@ -15,8 +15,7 @@ This feature is not guaranteed to always throttle low priority requests in favou
 ## How to get started: 
 Step 1: Whitelist your account by completing the nomination form : [priority based throttling - preview request](https://forms.microsoft.com/Pages/ResponsePage.aspx?id=v4j5cvGGr0GRqy180BHbR_kUn4g8ufhFjXbbwUF1gXFUMUQzUzFZSVkzODRSRkxXM0RKVDNUSDBGNi4u)
 
-Step2: Download the Nuget Package
-[to be added]
+Step2: Download the Nuget Package: [Azure Cosmos DB dotnetv3 SDK- 3.30.0-preview](https://www.nuget.org/packages/Microsoft.Azure.Cosmos/3.33.0-preview)
 
 Step3: Send us your feedback, comments, questions using the Issues tab on this repo. 
 
