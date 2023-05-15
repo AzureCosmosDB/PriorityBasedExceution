@@ -11,11 +11,14 @@ This feature is not guaranteed to always throttle low priority requests in favou
 - NoSQL
 ### SDK
 - .NET
+- Java
 
 ## How to get started: 
 Step 1: Whitelist your account by completing the nomination form : [priority based throttling - preview request](https://forms.microsoft.com/Pages/ResponsePage.aspx?id=v4j5cvGGr0GRqy180BHbR_kUn4g8ufhFjXbbwUF1gXFUMUQzUzFZSVkzODRSRkxXM0RKVDNUSDBGNi4u)
 
-Step2: Download the Nuget Package: [Azure Cosmos DB dotnetv3 SDK- 3.30.0-preview](https://www.nuget.org/packages/Microsoft.Azure.Cosmos/3.33.0-preview)
+Step2: Download the SDK latest version
+- .NET: [Azure Cosmos DB dotnetv3 SDK- 3.33.0-preview](https://www.nuget.org/packages/Microsoft.Azure.Cosmos/3.33.0-preview)
+- Java: [Azure Cosmos DB Java SDK - 4.45.0](https://mvnrepository.com/artifact/com.azure/azure-cosmos/4.45.0)
 
 Step3: Send us your feedback, comments, questions using the Issues tab on this repo. 
 
