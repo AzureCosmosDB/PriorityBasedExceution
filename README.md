@@ -24,6 +24,7 @@ Step3: Send us your feedback, comments, questions using the Issues tab on this r
 
 ## Sample Code
 
+### C#
 ```C#
 Document doc = new Document() 
 { 
@@ -40,7 +41,47 @@ using Microsoft.Azure.Cosmos.PriorityLevel;
 RequestOptions requestOptions = new ItemRequestOptions{PriorityLevel = PriorityLevel.Low};
 ItemResponse<Document> response = await container.CreateItemAsync<Document(doc, new PartitionKey("pkey1"), requestOptions); 
 ```
+### Java
 
+```java
+
+import com.azure.cosmos.ThroughputControlGroupConfig;
+import com.azure.cosmos.ThroughputControlGroupConfigBuilder;
+import com.azure.cosmos.models.CosmosItemRequestOptions;
+import com.azure.cosmos.models.PriorityLevel;
+
+class Family{
+   String id;
+   String lastName;
+}
+
+//define throughput control group with low priority
+ThroughputControlGroupConfig groupConfig = new ThroughputControlGroupConfigBuilder()
+                .groupName("low-priority-group")
+                .priorityLevel(PriorityLevel.LOW)
+                .build();
+container.enableLocalThroughputControlGroup(groupConfig);
+
+CosmosItemRequestOptions requestOptions = new CosmosItemRequestOptions();
+        requestOptions.setThroughputControlGroupName(groupConfig.getGroupName());
+
+Family family = new Family();
+family.setLastName("");
+
+
+        // Insert this item with low priority in the container using request options.
+        container.createItem(family, new PartitionKey(family.getLastName()), requestOptions)
+                .doOnSuccess((response) -> {
+                    logger.info("inserted doc with id: {}", response.getItem().getId());
+                })
+                .doOnError((exception) -> {
+                    logger.error(
+                            "Exception. e: {}",
+                            exception.getLocalizedMessage(),
+                            exception);
+                }).subscribe();
+
+```
 ## FAQ’s 
 
 1. #### How many priority levels can be specified in the request?<br/>
