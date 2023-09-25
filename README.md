@@ -66,7 +66,7 @@ CosmosItemRequestOptions requestOptions = new CosmosItemRequestOptions();
         requestOptions.setThroughputControlGroupName(groupConfig.getGroupName());
 
 Family family = new Family();
-family.setLastName("");
+family.setLastName("Anderson");
 
 
         // Insert this item with low priority in the container using request options.
