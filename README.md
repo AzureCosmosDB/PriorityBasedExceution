@@ -69,17 +69,13 @@ Family family = new Family();
 family.setLastName("Anderson");
 
 
-        // Insert this item with low priority in the container using request options.
-        container.createItem(family, new PartitionKey(family.getLastName()), requestOptions)
-                .doOnSuccess((response) -> {
-                    logger.info("inserted doc with id: {}", response.getItem().getId());
-                })
-                .doOnError((exception) -> {
-                    logger.error(
-                            "Exception. e: {}",
-                            exception.getLocalizedMessage(),
-                            exception);
-                }).subscribe();
+// Insert this item with low priority in the container using request options.
+container.createItem(family, new PartitionKey(family.getLastName()), requestOptions)
+    .doOnSuccess((response) -> {
+        logger.info("inserted doc with id: {}", response.getItem().getId());
+    }).doOnError((exception) -> {
+        logger.error("Exception. e: {}", exception.getLocalizedMessage(), exception);
+    }).subscribe();
 
 ```
 ## FAQ’s 
