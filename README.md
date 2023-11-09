@@ -12,6 +12,8 @@ This feature is not guaranteed to always throttle low priority requests in favou
 ### SDK
 - .NET
 - Java
+- Python
+- Javascript
 
 ## How to get started: 
 Step 1: Whitelist your account by completing the nomination form : [priority based throttling - preview request](https://forms.microsoft.com/Pages/ResponsePage.aspx?id=v4j5cvGGr0GRqy180BHbR_kUn4g8ufhFjXbbwUF1gXFUMUQzUzFZSVkzODRSRkxXM0RKVDNUSDBGNi4u)
@@ -19,6 +21,7 @@ Step 1: Whitelist your account by completing the nomination form : [priority bas
 Step2: Download the SDK latest version
 - .NET: [Azure Cosmos DB dotnetv3 SDK- 3.33.0-preview](https://www.nuget.org/packages/Microsoft.Azure.Cosmos/3.33.0-preview)
 - Java: [Azure Cosmos DB Java SDK - 4.45.0](https://mvnrepository.com/artifact/com.azure/azure-cosmos/4.45.0)
+- Python: [Azure Cosmos DB Python SDK - 4.5.2b2](https://pypi.org/project/azure-cosmos/4.5.2b2/)
 
 Step3: Send us your feedback, comments, questions using the Issues tab on this repo. 
 
