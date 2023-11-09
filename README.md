@@ -78,6 +78,53 @@ container.createItem(family, new PartitionKey(family.getLastName()), requestOpti
     }).subscribe();
 
 ```
+
+### Python
+
+```python
+import azure.cosmos.cosmos_client as cosmos_client
+from azure.cosmos.partition_key import PartitionKey
+
+# Define your Cosmos DB account and database details
+endpoint = "<cosmos-db-endpoint>"
+key = "<cosmos-db-key>"
+database_id = "<database-name>"
+container_id = "<container-name>"
+
+# Create a Cosmos DB client
+client = cosmos_client.CosmosClient(endpoint, key)
+
+# Create or get a database
+database = client.create_database_if_not_exists(id=database_id)
+
+# Create or get a container
+container = database.create_container_if_not_exists(
+    id=container_id,
+    partition_key=PartitionKey(path="/pkey"),
+)
+
+# Insert a document into the container with custom headers
+document = {
+    "id": "3",
+    "name": "John Doe",
+    "city": "New York",
+}
+
+# Define custom headers directly in the options
+headers = {
+    "x-ms-cosmos-priority-level": "Low"
+}
+
+container.create_item(body=document, headers = headers)
+
+# Query documents in the container
+query = "SELECT * FROM c"
+items = list(container.query_items(query=query, enable_cross_partition_query=True, headers = headers))
+
+for item in items:
+    print(item)
+```
+
 ## FAQ’s 
 
 1. #### How many priority levels can be specified in the request?<br/>
