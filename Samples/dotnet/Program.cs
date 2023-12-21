@@ -1,6 +1,8 @@
-﻿using Microsoft.Azure.Cosmos;
-
+﻿using Azure.Core;
+using Microsoft.Azure.Cosmos;
+using Microsoft.Azure.Cosmos.Fluent;
 using static System.Net.HttpStatusCode;
+using Microsoft.Azure.Documents.Client;
 
 public class Program
 {
@@ -18,11 +20,14 @@ public class Program
 
     int totalHighSuccessful = 0;
     int totalHighThrottled = 0;
+    int numDocs = 2000;
+
     private Program()
     {
-        this.client = new CosmosClient(
-            accountEndpoint: Environment.GetEnvironmentVariable("COSMOS_ENDPOINT")!,
+        CosmosClientBuilder builder = new CosmosClientBuilder(accountEndpoint: Environment.GetEnvironmentVariable("COSMOS_ENDPOINT")!,
             authKeyOrResourceToken: Environment.GetEnvironmentVariable("COSMOS_KEY")!);
+        builder.WithConnectionModeDirect().WithThrottlingRetryOptions(TimeSpan.FromSeconds(1), 0);
+        this.client = builder.Build();
     }
 
     public static async Task Main(string[] args)
@@ -38,6 +43,8 @@ public class Program
         database = await client.CreateDatabaseIfNotExistsAsync(DatabaseName);
         ContainerProperties containerProperties = new ContainerProperties(ContainerName, partitionKeyPath: PartitionKey);
 
+
+
         var throughputProperties = ThroughputProperties.CreateManualThroughput(manualThroughput);
         container = await database.CreateContainerIfNotExistsAsync(containerProperties, throughputProperties);
         IngestData().Wait();
@@ -46,11 +53,10 @@ public class Program
     private async Task Run()
     {
         Console.WriteLine("Running workload without priority");
-        await RunWorkloadScenario(1000, 1000, false, "without priority");
+        await RunWorkloadScenario(250, 250, false, "without priority");
         Console.WriteLine("Waiting for 1 minute");
-        //await Task.Delay(TimeSpan.FromMinutes(1));
-        Console.WriteLine("Running workload with priority");
-        await RunWorkloadScenario(1000,1000, true, "with priority");
+        await Task.Delay(TimeSpan.FromSeconds(10));
+        await RunWorkloadScenario(250, 250, true, "with priority");
     }
 
     private async Task IngestData()
@@ -65,16 +71,14 @@ public class Program
             Console.WriteLine("Number of documents in collection: " + count);
         }
 
-        int numDocs = 1000;
-
-        if (count < 1000)
+        if (count < numDocs)
         {
             List<Product> products = Product.GenerateProducts(numDocs, 0);
-            await WriteDocumentsConcurrentlyAsync(products, numDocs);
+            await WriteDocumentsConcurrentlyAsync(products);
         }
     }
 
-    private async Task WriteDocumentsConcurrentlyAsync(List<Product> products, int counter)
+    private async Task WriteDocumentsConcurrentlyAsync(List<Product> products)
     {
         int docs = 0;
         for (int i = 0; i < products.Count; i++)
@@ -98,30 +102,39 @@ public class Program
         ResetVariables();
         int simulationDurationSecs = 10;
 
-        // for (int i = 0; i < simulationDurationSecs; i++)
-        // {
+        for (int i = 0; i < simulationDurationSecs; i++)
+        {
             var lowPriorityTasks = Enumerable.Range(0, lowPriorityDocs)
                 .Select(j => ReadDocumentAsync(j, 2, priorityEnabled))
                 .ToList();
 
-            var highPriorityTasks = Enumerable.Range(0, highPriorityDocs)
+            var highPriorityTasks = Enumerable.Range(lowPriorityDocs + 1, highPriorityDocs)
                 .Select(j => ReadDocumentAsync(j, 1, priorityEnabled))
                 .ToList();
 
             List<Task> tasks = new List<Task>();
 
-            for(int k=0;k<lowPriorityDocs;k++){
-                tasks.Add(lowPriorityTasks[k]);
+            for (int k = 0; k < lowPriorityDocs; k++)
+            {
                 tasks.Add(highPriorityTasks[k]);
+                tasks.Add(lowPriorityTasks[k]);
             }
             await Task.WhenAll(tasks);
             //await Task.Delay(100);
-       // }
-        PrintResults(priorityDescription);
+        }
+        PrintResults(priorityDescription, priorityEnabled);
     }
 
-    private void PrintResults(string priorityDescription)
+    private void PrintResults(string priorityDescription, bool priorityEnabled)
     {
+        if (priorityEnabled)
+        {
+            Console.WriteLine("Result with priority enabled");
+        }
+        else
+        {
+            Console.WriteLine("Results without priority enabled");
+        }
         Console.WriteLine($"Total high successful requests {priorityDescription}: {totalHighSuccessful}, total high throttled {priorityDescription}: {totalHighThrottled}");
         Console.WriteLine($"Total low successful requests {priorityDescription}: {totalLowSuccessful}, total low throttled {priorityDescription}: {totalLowThrottled}");
         Console.WriteLine("\n");
@@ -135,7 +148,7 @@ public class Program
         totalLowThrottled = 0;
     }
 
-    private async Task ReadDocumentAsync(int idNum, int priority, bool priorityEnabled)
+    private Task ReadDocumentAsync(int idNum, int priority, bool priorityEnabled)
     {
         string id = "id_" + idNum;
 
@@ -145,48 +158,42 @@ public class Program
             requestOptions.PriorityLevel = (priority == 1) ? PriorityLevel.High : PriorityLevel.Low;
         }
 
-        try
+        return container.ReadItemAsync<Product>(id: id, partitionKey: new PartitionKey(id), requestOptions)
+        .ContinueWith(itemResponse =>
         {
-            await container.ReadItemAsync<Product>(id: id, partitionKey: new PartitionKey(id), requestOptions)
-            .ContinueWith(itemResponse => {
-                if (itemResponse!= null && itemResponse.IsCompletedSuccessfully)
+            if (itemResponse.IsCompletedSuccessfully)
+            {
+                if (priority == 1)
                 {
-                    Console.WriteLine("Request completed: "+ id + " with priority "+ priority);
-                    // if (priority == 1)
-                    // {
-                    //     Interlocked.Increment(ref totalHighSuccessful);
-                    // }
-                    // else
-                    // {
-                    //     Interlocked.Increment(ref totalLowSuccessful);
-                    // }
+                    Interlocked.Increment(ref totalHighSuccessful);
                 }
                 else
                 {
-                    //Console.WriteLine("Read failed with: " + itemResponse.Exception);
-                    Console.WriteLine("Request failed: "+ id + " with priority "+ priority);
+                    Interlocked.Increment(ref totalLowSuccessful);
                 }
-            });
+            }
+            else
+            {
+                //Console.WriteLine("Request failed: " + id + " with priority " + priority);
 
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine("Read failed with exception: " + ex.Message);
-            // if (ex.StatusCode == TooManyRequests)
-            // {
-            //     if (priority == 1)
-            //     {
-            //         Interlocked.Increment(ref totalHighThrottled);
-            //     }
-            //     else
-            //     {
-            //         Interlocked.Increment(ref totalLowThrottled);
-            //     }
-            // }
-            // else
-            // {
-            //     Console.WriteLine("Read failed with exception: " + ex.Message);
-            // }
-        }
+                CosmosException cosmosException = (CosmosException)itemResponse.Exception.InnerException;
+                if (cosmosException != null && cosmosException.StatusCode == TooManyRequests)
+                {
+                    if (priority == 1)
+                    {
+                        Interlocked.Increment(ref totalHighThrottled);
+                    }
+                    else
+                    {
+                        Interlocked.Increment(ref totalLowThrottled);
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("Read failed with exception: " + itemResponse.Exception);
+                }
+            }
+        });
+
     }
 }
