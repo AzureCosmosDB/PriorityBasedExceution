@@ -52,12 +52,14 @@ public class Program
 
     private async Task Run()
     {
-        Console.WriteLine("Running workload with priority");
-        await Task.Delay(TimeSpan.FromSeconds(10));
-        await RunWorkloadScenario(300, 300, true, "with priority");
-        Console.WriteLine("Waiting for 1 minute");
         Console.WriteLine("Running workload without priority");
         await RunWorkloadScenario(300, 300, false, "without priority");
+
+        Console.WriteLine("Waiting for 10 seconds\n");
+        await Task.Delay(TimeSpan.FromSeconds(10));
+
+        Console.WriteLine("Running workload with priority");
+        await RunWorkloadScenario(300, 300, true, "with priority");
     }
 
     private async Task IngestData()
@@ -103,15 +105,19 @@ public class Program
         ResetVariables();
         int simulationDurationSecs = 10;
 
+        List<Task> concurrentTasks = new List<Task>();
+
         for (int i = 0; i < simulationDurationSecs; i++)
         {
             var taskList = Enumerable.Range(0, lowPriorityDocs + highPriorityDocs)
                 .Select(j => ReadDocumentAsync(j, j%2, priorityEnabled))
                 .ToList();
+                
+            concurrentTasks = concurrentTasks.Concat(taskList).ToList();
 
-            await Task.WhenAll(taskList);
-            await Task.Delay(100);
+            await Task.Delay(1000);
         }
+        await Task.WhenAll(concurrentTasks);
         PrintResults(priorityDescription, priorityEnabled);
     }
 
