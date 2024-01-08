@@ -52,11 +52,12 @@ public class Program
 
     private async Task Run()
     {
-        Console.WriteLine("Running workload without priority");
-        await RunWorkloadScenario(250, 250, false, "without priority");
-        Console.WriteLine("Waiting for 1 minute");
+        Console.WriteLine("Running workload with priority");
         await Task.Delay(TimeSpan.FromSeconds(10));
-        await RunWorkloadScenario(250, 250, true, "with priority");
+        await RunWorkloadScenario(300, 300, true, "with priority");
+        Console.WriteLine("Waiting for 1 minute");
+        Console.WriteLine("Running workload without priority");
+        await RunWorkloadScenario(300, 300, false, "without priority");
     }
 
     private async Task IngestData()
@@ -104,23 +105,12 @@ public class Program
 
         for (int i = 0; i < simulationDurationSecs; i++)
         {
-            var lowPriorityTasks = Enumerable.Range(0, lowPriorityDocs)
-                .Select(j => ReadDocumentAsync(j, 2, priorityEnabled))
+            var taskList = Enumerable.Range(0, lowPriorityDocs + highPriorityDocs)
+                .Select(j => ReadDocumentAsync(j, j%2, priorityEnabled))
                 .ToList();
 
-            var highPriorityTasks = Enumerable.Range(lowPriorityDocs + 1, highPriorityDocs)
-                .Select(j => ReadDocumentAsync(j, 1, priorityEnabled))
-                .ToList();
-
-            List<Task> tasks = new List<Task>();
-
-            for (int k = 0; k < lowPriorityDocs; k++)
-            {
-                tasks.Add(highPriorityTasks[k]);
-                tasks.Add(lowPriorityTasks[k]);
-            }
-            await Task.WhenAll(tasks);
-            //await Task.Delay(100);
+            await Task.WhenAll(taskList);
+            await Task.Delay(100);
         }
         PrintResults(priorityDescription, priorityEnabled);
     }
