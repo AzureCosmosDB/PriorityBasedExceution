@@ -1,0 +1,16 @@
+{
+  "name": "cosmos-priority-based-execution-sample",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node priority-based-execution.js",
+    "check": "node --check priority-based-execution.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@azure/cosmos": "4.0.0",
+    "@azure/identity": "4.14.1"
+  }
+}
