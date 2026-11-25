@@ -1,145 +1,83 @@
-# Priority Based Execution
+# Priority-based execution
 
-Priority based execution is a capability which allows users to specify priority to the request sent to Cosmos DB. Based on the priority specified by the user, if there are more requests than the configured RU/S in a second, then Cosmos DB will throttle low priority requests to allow high priority requests to execute. 
+Priority-based execution lets an application assign **High** or **Low** priority to Azure Cosmos DB for NoSQL requests. When demand exceeds the configured throughput (RU/s), low-priority requests are throttled first on a best-effort basis, allowing important work to take precedence over background work.
 
-This capability allows a user to perform more important tasks while delaying lesser important tasks when there are higher number of requests than what a container with configured RU/s can handle at a given time. The lesser important tasks will be continuously retried by any client using SDK based on the retry time and will be executed once the requirement of important (high priority) tasks are satisfied. 
+There is no throughput reservation or additional feature charge. Prioritization is best effort, not a guarantee, and has no associated performance SLA. SDK retries follow the configured retry policy; requests can still fail when that policy is exhausted.
 
-This feature is not guaranteed to always throttle low priority requests in favour of high priority requests and there are no SLA’s associated with the feature. This is a best effort scenario and there is a time associated with the start of throttling of low priority requests which is dependent on the rate at which high priority requests are sent to Cosmos DB. 
+## Getting started
 
-## Supported API's and SDK's:
-### API
-- NoSQL
-### SDK
-- .NET
-- Java
-- Python
-- Javascript
+1. Use an Azure Cosmos DB for NoSQL account with provisioned throughput.
+2. In the Azure portal, open the account's **Features** page and enable **Priority-based execution**. The old preview nomination form is no longer required.
+3. Install a supported SDK and run one of the linked samples against a test container.
 
-## How to get started: 
-Step 1: Whitelist your account by completing the nomination form : [priority based throttling - preview request](https://forms.microsoft.com/Pages/ResponsePage.aspx?id=v4j5cvGGr0GRqy180BHbR_kUn4g8ufhFjXbbwUF1gXFUMUQzUzFZSVkzODRSRkxXM0RKVDNUSDBGNi4u)
+See the [priority-based execution documentation](https://learn.microsoft.com/azure/cosmos-db/priority-based-execution) for account configuration, monitoring, and default-priority settings.
 
-Step2: Download the SDK latest version
-- .NET: [Azure Cosmos DB dotnetv3 SDK- 3.33.0-preview](https://www.nuget.org/packages/Microsoft.Azure.Cosmos/3.33.0-preview)
-- Java: [Azure Cosmos DB Java SDK - 4.45.0](https://mvnrepository.com/artifact/com.azure/azure-cosmos/4.45.0)
-- Python: [Azure Cosmos DB Python SDK - 4.5.2b2](https://pypi.org/project/azure-cosmos/4.5.2b2/)
+## Minimum SDK versions
 
-Step3: Send us your feedback, comments, questions using the Issues tab on this repo. 
+These are the requirements published in the [official documentation](https://learn.microsoft.com/azure/cosmos-db/priority-based-execution#sdk-requirements), not the latest available releases. Prefer the latest stable release within the supported SDK major version for production.
 
-## Sample Code
+| SDK | Package | Minimum version | Sample file |
+| --- | --- | --- | --- |
+| .NET v3 | [Microsoft.Azure.Cosmos](https://www.nuget.org/packages/Microsoft.Azure.Cosmos/3.38.0) | 3.38.0 | [Program.cs](samples/dotnet/Program.cs) |
+| Java v4 | [com.azure:azure-cosmos](https://central.sonatype.com/artifact/com.azure/azure-cosmos/4.45.0) | 4.45.0 | [PriorityBasedExecution.java](samples/java/src/main/java/PriorityBasedExecution.java) |
+| Python v4 | [azure-cosmos](https://pypi.org/project/azure-cosmos/4.14.2/) | 4.14.2 | [priority_based_execution.py](samples/python/priority_based_execution.py) |
+| JavaScript v4 | [@azure/cosmos](https://www.npmjs.com/package/@azure/cosmos/v/4.0.0) | 4.0.0 | [priority-based-execution.js](samples/javascript/priority-based-execution.js) |
 
-### C#
-```C#
-Document doc = new Document() 
-{ 
-    Id = "id", 
-    Address = "address1", 
-    Pkey = "pkey1" 
-}; 
+The Python SDK exposed the `priority` option in earlier releases; the table follows the current published requirement rather than the first release containing that option.
 
-// this code will insert an item in Cosmos DB container with low priority
+## Running the samples
 
-using Microsoft.Azure.Cosmos.PartitionKey;
-using Microsoft.Azure.Cosmos.PriorityLevel;
- 
-RequestOptions requestOptions = new ItemRequestOptions{PriorityLevel = PriorityLevel.Low};
-ItemResponse<Document> response = await container.CreateItemAsync<Document(doc, new PartitionKey("pkey1"), requestOptions); 
-```
-### Java
+Each sample authenticates with **managed identity** and uses one client to create an item with **Low** priority and point-read that same item with **High** priority. Java uses local throughput-control groups to set priority, as supported by its minimum SDK version.
 
-```java
+Before running:
 
-import com.azure.cosmos.ThroughputControlGroupConfig;
-import com.azure.cosmos.ThroughputControlGroupConfigBuilder;
-import com.azure.cosmos.models.CosmosItemRequestOptions;
-import com.azure.cosmos.models.PriorityLevel;
+- Enable priority-based execution on the account.
+- Create a test database and container with partition key path **`/pk`**. The samples do not provision resources or change account settings.
+- Run on an Azure host that supports managed identity, such as an Azure VM or App Service, with a system-assigned identity enabled or a user-assigned identity attached.
+- Grant that identity the **Cosmos DB Built-in Data Contributor** data-plane role for the test container, or an equivalent custom role permitting metadata reads and item creation/reads. Use the container scope `/dbs/<database-name>/colls/<container-name>` where possible. An Azure management-plane role such as Contributor is not sufficient for item access. See [data-plane role assignments](https://learn.microsoft.com/azure/cosmos-db/how-to-connect-role-based-access-control#grant-data-plane-role-based-access) and [built-in data roles](https://learn.microsoft.com/azure/cosmos-db/reference-data-plane-security#built-in-roles).
+- Set `COSMOS_ENDPOINT`, `COSMOS_DATABASE`, and `COSMOS_CONTAINER` in your process environment. In PowerShell, assign variables using `$env:COSMOS_DATABASE = "your-database"` and the same syntax for the other names.
+- Leave `AZURE_CLIENT_ID` unset for the host's system-assigned identity, or set it to the **client ID** of an attached user-assigned managed identity. This is not the identity's principal/object ID.
 
-class Family{
-   String id;
-   String lastName;
-}
+All samples use `ManagedIdentityCredential` directly. They do not use account keys, client secrets, or a developer credential fallback. A local workstation without a managed-identity endpoint cannot authenticate simply by running `az login`; run the samples on the configured Azure host. Identity attachment and role assignment must be completed separately; the samples do not perform them.
 
-//define throughput control group with low priority
-ThroughputControlGroupConfig groupConfig = new ThroughputControlGroupConfigBuilder()
-                .groupName("low-priority-group")
-                .priorityLevel(PriorityLevel.LOW)
-                .build();
-container.enableLocalThroughputControlGroup(groupConfig);
+Run commands from the repository root:
 
-CosmosItemRequestOptions requestOptions = new CosmosItemRequestOptions();
-        requestOptions.setThroughputControlGroupName(groupConfig.getGroupName());
+| SDK | Local prerequisites | Install/build | Run |
+| --- | --- | --- | --- |
+| .NET | .NET 10 SDK and runtime | `dotnet build samples\dotnet\PriorityBasedExecution.csproj` | `dotnet run --project samples\dotnet\PriorityBasedExecution.csproj` |
+| Java | JDK 11 or later and Maven | `mvn -f samples\java\pom.xml compile` | `mvn -f samples\java\pom.xml exec:java` |
+| Python | Python 3.10 or later; preferably a virtual environment | `python -m pip install -r samples\python\requirements.txt` | `python samples\python\priority_based_execution.py` |
+| JavaScript | Node.js 22 or later | `npm --prefix samples\javascript install` | `npm --prefix samples\javascript start` |
 
-Family family = new Family();
-family.setLastName("Anderson");
+The commands above use Windows path separators. On macOS or Linux, replace them with forward slashes.
 
+Each run creates one uniquely named item and leaves it in the test container for inspection. Delete that item after testing if it is no longer needed. The output identifies the item and the requested priorities. These two sequential operations demonstrate the APIs, not throttling or a performance guarantee; observing prioritization requires competing traffic that exceeds provisioned throughput.
 
-// Insert this item with low priority in the container using request options.
-container.createItem(family, new PartitionKey(family.getLastName()), requestOptions)
-    .doOnSuccess((response) -> {
-        logger.info("inserted doc with id: {}", response.getItem().getId());
-    }).doOnError((exception) -> {
-        logger.error("Exception. e: {}", exception.getLocalizedMessage(), exception);
-    }).subscribe();
+## Limitations
 
-```
+- Supported API: Azure Cosmos DB for **NoSQL**.
+- Not supported for **serverless** accounts.
+- Prioritization is non-deterministic for containers using shared database throughput.
+- With strong or bounded staleness consistency, read-request prioritization may not work effectively.
 
-### Python
+## FAQ
 
-```python
-import azure.cosmos.cosmos_client as cosmos_client
-from azure.cosmos.partition_key import PartitionKey
+### What priorities are available?
 
-# Define your Cosmos DB account and database details
-endpoint = "<cosmos-db-endpoint>"
-key = "<cosmos-db-key>"
-database_id = "<database-name>"
-container_id = "<container-name>"
+**High** and **Low**.
 
-# Create a Cosmos DB client
-client = cosmos_client.CosmosClient(endpoint, key)
+### What is the default priority?
 
-# Create or get a database
-database = client.create_database_if_not_exists(id=database_id)
+The account default is **High** unless changed. When a request omits priority, the account's configured default applies. These samples explicitly set priority for both operations.
 
-# Create or get a container
-container = database.create_container_if_not_exists(
-    id=container_id,
-    partition_key=PartitionKey(path="/pkey"),
-)
+### Does priority reserve RU/s for high-priority requests?
 
-# Insert a document into the container with custom headers
-document = {
-    "id": "3",
-    "name": "John Doe",
-    "city": "New York",
-}
+No. Either priority can use the provisioned throughput when capacity is available.
 
-# Define custom headers directly in the options
-headers = {
-    "x-ms-cosmos-priority-level": "Low"
-}
+### Does enabling this feature cost extra?
 
-container.create_item(body=document, headers = headers)
+There is no additional feature charge. Normal Azure Cosmos DB usage charges still apply.
 
-# Query documents in the container
-query = "SELECT * FROM c"
-items = list(container.query_items(query=query, enable_cross_partition_query=True, headers = headers))
+### Where can I send feedback?
 
-for item in items:
-    print(item)
-```
-
-## FAQ’s 
-
-1. #### How many priority levels can be specified in the request?<br/>
-    Currently, there are only 2 priority, high and low. 
-
-2. #### What is the default priority of a request?<br/>
-   By default, all requests are of high priority. 
-
-3. #### Does enabling priority based throttling means reserving a fraction of RU/s for high priority requests?<br/>
-   No, there is no reservation of RU/s. The user can use all their provisioned throughput irrespective of the priority of requests they send.  
-
-4. #### What are the pricing changes associated with this feature?<br/>
-   There is no cost associated with this feature, its free of charge. 
-   
-   
+Use this repository's [Issues](https://github.com/AzureCosmosDB/PriorityBasedExceution/issues) tab for feedback, questions, and sample problems. Do not include account keys or other sensitive information.
